@@ -11,7 +11,9 @@ import socket
 import urllib
 import webbrowser
 
-def loadConfig():
+apiURL = 'http://jisho.org/api/v1/search/words?keyword='
+
+def load_config():
     config = configparser.ConfigParser()
     config.read('tomo.ini')
     nickname = config.get('TWITCH', 'nickname')
@@ -20,54 +22,74 @@ def loadConfig():
     return nickname, channel, token
 
 
-"""pretty-print the tokens"""
-def printTree(tree):
+def print_tree(tree):
+    """pretty-print the tokens"""
     for chunk in tree:
         for token in chunk:
             pprint(vars(token))
             print(vars(token)['genkei'])
 
 
-"""Tokenizes a message and returns the resulting tree"""
-def tokenizeTree(tree):
-    tokenList = []
-    for chunk in tree:
-        for token in chunk:
-            tokenList.append(vars(token)['genkei'])
-    tokenList.pop()     # to remove the trailing '*' element
-    return tokenList
-
-
-"""takes a message (string) and returns a list of the generated tokens as strings"""
-def tokenizeMessage(message):
+def analyze_msg(message):
+    """Applies NLP Cabocha to the passed message and return resulting tree."""
     analyzer = CaboChaAnalyzer()
-    tree = analyzer.parse(message)
-    return tokenizeTree(tree)
+    return analyzer.parse(message)
 
 
-"""query the tokens that are kanji"""
-async def askJisho(tokenList):
+def parse(tree):
+    """Iterates through the tree to extract their base forms and returns
+       the resulting list of strings"""
+    tokens = []
+    chunks = []
+    for chunk in tree:
+        tokenstr = ""
+        for token in chunk:
+            # chunk_genkei.append(vars(token)['genkei'])
+            tokens.append(token.genkei)
+            tokenstr += token.genkei
+        chunks.append(tokenstr)
+    if tokens[-1] == "*":
+        tokens.pop()  # to remove the trailing '*' element
+    if chunks[-1] == "*":
+        chunks.pop()
+    return chunks, tokens
+
+
+async def askJisho(tokens):
+    """Queries Jisho for the kanji"""
     data = {}
     url = 'http://jisho.org/api/v1/search/words?keyword=\"'
-    for word in tokenList:
-        response = requests.get('http://jisho.org/api/v1/search/words?keyword=\"' + word)
-        pprint(response.data)
-        # json.loads(response.content.decode())['data']
+    for word in tokens:
+        # s = word['genkei']
+        response = requests.get(apiURL + s)
+        data[word] = json.loads(response.content.decode('utf-8'))['data']
         # json.loads(response.content.decode())['data'][i]['slug']
+    return data
 
 
-"""opens Jisho.org in a browser with the full chat message"""
 async def openJisho(message):
+    """Opens Jisho.org in a browser with the full chat message"""
     search = urllib.parse.quote(message)
     url = "http://jisho.org/search/" + search
     webbrowser.open(url)
 
 
-"""constantly listen for message on the socket"""
+def getSenses(data):
+    """Iterates through the responses from Jisho and picks out
+       the correct slug and it's english senses.
+    """
+    # for word in data:
+    #     # json.loads(response.content.decode())['data'][i]['slug']
+    #     i = 0
+    #     for i in word:
+    #         # if word[i]['slug'] ==
+
+
 async def listenForMessages(s):
+    """Listens for message on the socket"""
     while True:
         resp = s.recv(2048).decode('utf-8')
-        # to ensure connection to server isn't prematurely terminated
+        # to ensure connection to server isn't prematurely terminated:
         if resp.startswith('PING'):
             s.send("PONG\n".encode('utf-8'))
         elif len(resp) > 0:
@@ -77,18 +99,22 @@ async def listenForMessages(s):
                 # extract tokens from message and put them into a list
                 username, channel, message = result.groups()
                 await openJisho(message)
-                tokenList = tokenizeMessage(message)
-                print(tokenList)
+                tree = analyze_msg(message)
+                chunks = tree.chunks
+                tokens = tree.tokens
+                chunk_list, token_list = parse(tree)
+                pprint(chunk_list)
+                pprint(token_list)
                 # using the JishoAPI, query the word in the list
-                words = await askJisho(tokenList)
+                # words = await askJisho(tokens)
+                # words2 = await askJisho(chunks)
             else:
                 print("parse failed")
 
 
 async def main():
     # load credentials from the config file
-    nickname, channel, token = loadConfig()
-
+    nickname, channel, token = load_config()
     server = 'irc.chat.twitch.tv'
     port = 6667
 
@@ -98,10 +124,9 @@ async def main():
     s.send(f"PASS {token}\n".encode('utf-8'))
     s.send(f"NICK {nickname}\n".encode('utf-8'))
     s.send(f"JOIN {channel}\n".encode('utf-8'))
-
     await listenForMessages(s)
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())
