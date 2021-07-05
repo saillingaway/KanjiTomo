@@ -27,7 +27,7 @@ def print_tree(tree):
     for chunk in tree:
         for token in chunk:
             pprint(vars(token))
-            print(vars(token)['genkei'])
+            # print(vars(token)['genkei'])
 
 
 def analyze_msg(message):
@@ -38,7 +38,7 @@ def analyze_msg(message):
 
 def parse(tree):
     """Iterates through the tree to extract their base forms and returns
-       the resulting list of strings"""
+       the resulting list of strings."""
     tokens = []
     chunks = []
     for chunk in tree:
@@ -48,8 +48,9 @@ def parse(tree):
             tokens.append(token.genkei)
             tokenstr += token.genkei
         chunks.append(tokenstr)
+    # to remove the trailing '*' element
     if tokens[-1] == "*":
-        tokens.pop()  # to remove the trailing '*' element
+        tokens.pop()
     if chunks[-1] == "*":
         chunks.pop()
     return chunks, tokens
@@ -58,13 +59,17 @@ def parse(tree):
 async def askJisho(tokens):
     """Queries Jisho for the kanji"""
     data = {}
+    senses = {}
     url = 'http://jisho.org/api/v1/search/words?keyword=\"'
     for word in tokens:
-        # s = word['genkei']
-        response = requests.get(apiURL + s)
+        response = requests.get(apiURL + word)
         data[word] = json.loads(response.content.decode('utf-8'))['data']
         # json.loads(response.content.decode())['data'][i]['slug']
-    return data
+        # data['日本語'][0]['slug']
+        for i in range(len(data[word])):
+            if data[word][i]['slug'] == word:
+                senses[word] = get_senses(data[word][i]['slug'])
+    return data, senses
 
 
 async def openJisho(message):
@@ -74,16 +79,12 @@ async def openJisho(message):
     webbrowser.open(url)
 
 
-def getSenses(data):
-    """Iterates through the responses from Jisho and picks out
-       the correct slug and it's english senses.
-    """
-    # for word in data:
-    #     # json.loads(response.content.decode())['data'][i]['slug']
-    #     i = 0
-    #     for i in word:
-    #         # if word[i]['slug'] ==
-
+async def get_senses(word):
+    """Iterates through the responses from Jisho to pick
+       out the correct slug and it's english senses."""
+    senses = []
+    word['senses']
+    return senses
 
 async def listenForMessages(s):
     """Listens for message on the socket"""
@@ -106,8 +107,9 @@ async def listenForMessages(s):
                 pprint(chunk_list)
                 pprint(token_list)
                 # using the JishoAPI, query the word in the list
-                # words = await askJisho(tokens)
-                # words2 = await askJisho(chunks)
+                data, senses = await askJisho(token_list)
+                # senses = get_senses(data)
+                pprint(data)
             else:
                 print("parse failed")
 

@@ -1,8 +1,8 @@
-server.py
-tomo.ini
-config.json
 venv
 cabocha-master
 cabocha
+examples/config-twitch.json
+particles.json
 expressions.txt
-
+tomo.ini
+config.json
