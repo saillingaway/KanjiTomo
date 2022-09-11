@@ -4,7 +4,7 @@ It eliminates the hassle of having to stop your streaming activities to look up 
 
 ### How it works
 KanjiTomo connects to your Twitch account and forwards the chat messages straight to [Jisho.org](https://jisho.org), one of the most useful Japanese translation tools available online. 
-The message's particles and endings are stripped using [Cabocha](), a Japanese N.L.P./Structure Analyzer, to leave only the core phrases and characters. 
+The message's particles and endings are stripped using [Cabocha](http://taku910.github.io/mecab/), a Japanese N.L.P./Structure Analyzer, to leave only the core phrases and characters. 
 Then the phrases are opened in the browser on Jisho.org for you to see and interpret based on context.
 
 ### Set up
