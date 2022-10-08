@@ -59,3 +59,9 @@ fabric.properties
 
 # Editor-based Rest Client
 .idea/httpRequests
+
+#idea/ just everything actually
+.idea/*
+
+# DS_Store
+.DS_Store
