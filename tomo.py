@@ -13,6 +13,7 @@ import webbrowser
 
 apiURL = 'http://jisho.org/api/v1/search/words?keyword='
 
+
 def load_config():
     config = configparser.ConfigParser()
     config.read('tomo.ini')
@@ -56,7 +57,7 @@ def parse(tree):
     return chunks, tokens
 
 
-async def askJisho(tokens):
+async def ask_jisho(tokens):
     """Queries Jisho for the kanji"""
     data = {}
     senses = {}
@@ -72,7 +73,7 @@ async def askJisho(tokens):
     return data, senses
 
 
-async def openJisho(message):
+async def open_jisho(message):
     """Opens Jisho.org in a browser with the full chat message"""
     search = urllib.parse.quote(message)
     url = "http://jisho.org/search/" + search
@@ -86,7 +87,8 @@ async def get_senses(word):
     word['senses']
     return senses
 
-async def listenForMessages(s):
+
+async def listen_for_messages(s):
     """Listens for message on the socket"""
     while True:
         resp = s.recv(2048).decode('utf-8')
@@ -97,9 +99,9 @@ async def listenForMessages(s):
             # parse the message
             result = re.search(':(.*)!.*@.*.tmi.twitch.tv PRIVMSG #(.*) :(.*)', resp)
             if result:
-                # extract tokens from message and put them into a list
+                # extract tokens from message and put tpりんhem into a list
                 username, channel, message = result.groups()
-                await openJisho(message)
+                await open_jisho(message)
                 tree = analyze_msg(message)
                 chunks = tree.chunks
                 tokens = tree.tokens
@@ -107,7 +109,7 @@ async def listenForMessages(s):
                 pprint(chunk_list)
                 pprint(token_list)
                 # using the JishoAPI, query the word in the list
-                data, senses = await askJisho(token_list)
+                data, senses = await ask_jisho(token_list)
                 # senses = get_senses(data)
                 pprint(data)
             else:
@@ -126,7 +128,7 @@ async def main():
     s.send(f"PASS {token}\n".encode('utf-8'))
     s.send(f"NICK {nickname}\n".encode('utf-8'))
     s.send(f"JOIN {channel}\n".encode('utf-8'))
-    await listenForMessages(s)
+    await listen_for_messages(s)
 
 
 if __name__ == "__main__":
